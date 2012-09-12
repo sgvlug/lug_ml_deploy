@@ -4,6 +4,8 @@ script_dir=`dirname $0`
 . $script_dir/setup_common.sh
 
 function setup_packages {
+    print_info "Installing required packages"
+
     # Run through the apt-get update/upgrade first. This should be done before
     # we try to install any package
     /usr/bin/apt-get -q -y update
@@ -28,19 +30,22 @@ function setup_packages {
 }
 
 function configure_exim {
+    print_info "Configuring exim"
+
     # Copy or mailman configs into the exim split directory
     # system
     cp -v $script_dir/configs/exim/04_exim4-config_mailman /etc/exim4/conf.d/main/
     cp -v $script_dir/configs/exim/40_exim4-config_mailman /etc/exim4/conf.d/transport
     cp -v $script_dir/configs/exim/101_exim4-config_mailman /etc/exim4/conf.d/router
 
-    exim_update_conf=/etc/exim4/update-exim4.conf.conf
-
     # Change exim config to:
     # 1. Be a internet connected MTA
     # 2. Handle mail for our domains
     # 3. Listen on all interfaces
     # 4. Use split configuration, which will pick up files copied above 
+    exim_update_conf=/etc/exim4/update-exim4.conf.conf
+    backup_file $exim_update_conf    
+
     sed -i "s/dc_eximconfig_configtype.*$/dc_eximconfig_configtype='internet'/" $exim_update_conf
     sed -i "s/dc_other_hostnames.*$/dc_other_hostnames='sgvlug.net;sgvlug.org'/"  $exim_update_conf 
     sed -i "s/dc_local_interfaces.*$/dc_local_interfaces=''/" $exim_update_conf
@@ -55,13 +60,17 @@ function configure_exim {
 }
 
 function configure_lighttpd {
+    print_info "Configuring lighttpd"
+
     # Copy our configs to be included in the mail lighttpd.conf config
     cp -v $script_dir/configs/lighttpd/mailman.conf /etc/lighttpd
     cp -v $script_dir/configs/lighttpd/website.conf /etc/lighttpd
 
-    lighttpd_config=/etc/lighttpd/lighttpd.conf
 
     # Disable directory listing in lighttpd config
+    lighttpd_config=/etc/lighttpd/lighttpd.conf
+    backup_file $lighttpd_config
+
     sed -i 's/server.dir-listing.*$/server.dir-listing          = "disable"/' $lighttpd_config
 
     # Add includes for our configs
@@ -78,10 +87,47 @@ END
 }
 
 function configure_mailman {
-    echo -n
+    print_info "Configuring mailman"
+
+    # Modify mailman config in etc
+    # 1. Get rid of cgi-bin in urls
+    # 2. Use our preferred domain by default
+    # 3. Suppress alias output on newlist
+    mm_config=/etc/mailman/mm_cfg.py
+    backup_file $mm_config
+
+    sed -r -i "s/^DEFAULT_URL_PATTERN.*$/DEFAULT_URL_PATTERN = 'http:\/\/%s\/mailman\/'/" $mm_config
+    sed -r -i "s/^PRIVATE_ARCHIVE_URL.*$/PRIVATE_ARCHIVE_URL = '\/mailman\/private'/" $mm_config
+    sed -i "s/^DEFAULT_EMAIL_HOST.*$/DEFAULT_EMAIL_HOST = 'sgvlug.net'/" $mm_config
+    sed -i "s/^DEFAULT_URL_HOST.*$/DEFAULT_URL_HOST   = 'sgvlug.net'/" $mm_config
+    sed -i "s/^\s*#\s*MTA\s*=\s*None/MTA=None/" $mm_config
+
+    # Edit sitelist.cfg to disable responding to non-members
+    # This keeps from generating bounces in messages sent to
+    # potential spammers trying to send to open mailing lists
+    sitelist_config=/var/lib/mailman/data/sitelist.cfg
+    backup_file $sitelist_config
+
+    sed -i "s/^generic_nonmember_action.*$/generic_nonmember_action = 3/" $sitelist_config
+    sed -i "s/^forward_auto_discards.*$/forward_auto_discards = 0/" $sitelist_config
+
+    # Create mailman list, necessary for mailman to start up
+    if [ ! -e "/var/lib/mailman/lists/mailman" ]; then
+        rand_pw=`tr -dc "[:alpha:]" < /dev/urandom | head -c 8`
+        /usr/lib/mailman/bin/newlist -q mailman admin@sgvlug.net $rand_pw
+    fi
+
+    # Restart mailman, or start for first time if mailman list did not exist
+    /etc/init.d/mailman restart
+
+    # Check that site can handle the default list
+    print_info "Checking mailing list routine"
+    print_info "You should NOT see 'Unrouteable address' if things are configured correctly"
+    exim -bt mailman@sgvlug.org
+    exim -bt mailman@sgvlug.net
 }
 
-#setup_packages
-#configure_exim
-#configure_lighttpd
+setup_packages
+configure_exim
+configure_lighttpd
 configure_mailman

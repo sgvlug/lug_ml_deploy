@@ -82,3 +82,13 @@ function check_sanity {
         die "Distribution is not supported"
     fi
 }
+
+function backup_file {
+    backup_fn=$1
+
+    if [ ! -e "${backup_fn}.orig" ]; then
+        cp -v $backup_fn ${backup_fn}.orig
+    else
+        print_warn "Backup of $backup_fn already exists"
+    fi
+}
