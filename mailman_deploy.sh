@@ -38,6 +38,11 @@ function configure_exim {
     cp -v $script_dir/configs/exim/40_exim4-config_mailman /etc/exim4/conf.d/transport
     cp -v $script_dir/configs/exim/101_exim4-config_mailman /etc/exim4/conf.d/router
 
+    # Update mailname to our desired name, not hostname
+    mailname=/etc/mailname
+    backup_file $mailname
+    echo "sgvlug.net" > $mailname
+
     # Change exim config to:
     # 1. Be a internet connected MTA
     # 2. Handle mail for our domains
