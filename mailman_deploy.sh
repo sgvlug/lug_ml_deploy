@@ -6,9 +6,31 @@ script_dir=`dirname $0`
 function setup_packages {
     print_info "Installing required packages"
 
-    # Run through the apt-get update/upgrade first. This should be done before
-    # we try to install any package
-    /usr/bin/apt-get -q -y update
+    # If running trusty then allow upgrading mailman version
+    curr_release=$(lsb_release -c | awk '{print $2}')
+    if [[ "$curr_release" -eq "trusty" ]]; then
+        upgrade_release=vivid
+        print_info "Using $upgrade_release for mailman"
+
+        echo "deb http://archive.ubuntu.com/ubuntu $upgrade_release main restricted universe multiverse" >  /etc/apt/sources.list.d/${upgrade_release}.list
+        cat > /etc/apt/preferences.d/$upgrade_release <<END
+Package: *
+Pin: release a=$upgrade_release
+Pin-Priority: 100
+END
+        # Update package list now
+        /usr/bin/apt-get -q -y update
+
+        # Update apt to remove error messages whenever running apt
+        apt-get -y -t ${upgrade_release} install apt/${upgrade_release}
+    else
+
+        # Just update package list if not upgrading mailman
+        /usr/bin/apt-get -q -y update
+
+    fi
+
+    # Make sure all 
     /usr/bin/apt-get -q -y dist-upgrade
 
     # Remove anacron if installed, since it stops anything
@@ -26,7 +48,11 @@ function setup_packages {
     check_install /usr/sbin/lighttpd lighttpd
 
     # Now install the mailman package
-    check_install /usr/lib/mailman/bin/newlist mailman
+    if [ -z "$upgrade_release" ]; then
+        check_install /usr/lib/mailman/bin/newlist mailman/
+    else
+        check_install /usr/lib/mailman/bin/newlist mailman/${upgrade_release}
+    fi
 }
 
 function copy_scripts {
