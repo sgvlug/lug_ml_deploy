@@ -29,14 +29,21 @@ function setup_packages {
     check_install /usr/lib/mailman/bin/newlist mailman
 }
 
+function copy_scripts {
+    print_info "Copying scripts"
+
+    cp -v $script_dir/scripts/mmbackup /etc/cron.daily/
+}
+
 function configure_exim {
     print_info "Configuring exim"
 
     # Copy or mailman configs into the exim split directory
     # system
     cp -v $script_dir/configs/exim/04_exim4-config_mailman /etc/exim4/conf.d/main/
-    cp -v $script_dir/configs/exim/40_exim4-config_mailman /etc/exim4/conf.d/transport
-    cp -v $script_dir/configs/exim/101_exim4-config_mailman /etc/exim4/conf.d/router
+    cp -v $script_dir/configs/exim/40_exim4-config_mailman /etc/exim4/conf.d/transport/
+    cp -v $script_dir/configs/exim/101_exim4-config_mailman /etc/exim4/conf.d/router/
+    cp -v $script_dir/configs/exim/00_localmacros /etc/exim4/conf.d/main/
 
     # Update mailname to our desired name, not hostname
     mailname=/etc/mailname
@@ -52,7 +59,7 @@ function configure_exim {
     backup_file $exim_update_conf    
 
     sed -i "s/dc_eximconfig_configtype.*$/dc_eximconfig_configtype='internet'/" $exim_update_conf
-    sed -i "s/dc_other_hostnames.*$/dc_other_hostnames='sgvlug.net;sgvlug.org'/"  $exim_update_conf 
+    sed -i "s/dc_other_hostnames.*$/dc_other_hostnames='sgvlug.towhee.org;sgvlug.net;sgvlug.org;sgvhak.net;sgvhak.org;lists.repair-cafe-pasadena.org'/"  $exim_update_conf 
     sed -i "s/dc_local_interfaces.*$/dc_local_interfaces=''/" $exim_update_conf
     sed -i "s/dc_use_split_config.*$/dc_use_split_config='true'/" $exim_update_conf
 
@@ -103,8 +110,8 @@ function configure_mailman {
 
     sed -r -i "s/^DEFAULT_URL_PATTERN.*$/DEFAULT_URL_PATTERN = 'http:\/\/%s\/mailman\/'/" $mm_config
     sed -r -i "s/^PRIVATE_ARCHIVE_URL.*$/PRIVATE_ARCHIVE_URL = '\/mailman\/private'/" $mm_config
-    sed -i "s/^DEFAULT_EMAIL_HOST.*$/DEFAULT_EMAIL_HOST = 'sgvlug.net'/" $mm_config
-    sed -i "s/^DEFAULT_URL_HOST.*$/DEFAULT_URL_HOST   = 'sgvlug.net'/" $mm_config
+    sed -i "s/^DEFAULT_EMAIL_HOST.*$/DEFAULT_EMAIL_HOST = 'sgvlug.towhee.org'/" $mm_config
+    sed -i "s/^DEFAULT_URL_HOST.*$/DEFAULT_URL_HOST   = 'sgvlug.towhee.org'/" $mm_config
     sed -i "s/^\s*#\s*MTA\s*=\s*None/MTA=None/" $mm_config
 
     # Edit sitelist.cfg to disable responding to non-members
@@ -133,6 +140,7 @@ function configure_mailman {
 }
 
 setup_packages
+copy_scripts
 configure_exim
 configure_lighttpd
 configure_mailman

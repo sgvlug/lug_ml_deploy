@@ -14,7 +14,7 @@ MM_GID=list
 #
 # Domains that your lists are in - colon separated list
 # you may wish to add these into local_domains as well
-domainlist mm_domains=sgvlug.net:sgvlug.org
+domainlist mm_domains=sgvlug.towhee.org:sgvlug.net:sgvlug.org:sgvhak.net:sgvhak.org:lists.repair-cafe-pasadena.org
 #
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 #

@@ -1,0 +1,5 @@
+DKIM_CANON = relaxed
+DKIM_SELECTOR = sgvtech
+DKIM_PRIVATE_KEY = /etc/exim4/dkim.private.key
+#DKIM_DOMAIN = ${lc:${domain:$h_from:}}
+DKIM_DOMAIN = sgvlug.towhee.org

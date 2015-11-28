@@ -21,7 +21,8 @@ In order to fully restore the LUG mailing list on a new server one would:
     /var/lib/mailman/archives
     /var/lib/mailman/data
     /var/lib/mailman/lists
+    /etc/exim4/dkim.*
 * Run the following to reset passwords for lists if they are unknown:
     /usr/lib/mailman/bin/change_pw -l <list_name> -p <new_password>
-* Also check the modified configuration files against those in the backup to 
+* Check the modified configuration files against those in the backup to 
 ensure no changes have been made that were not incorporated into this script.
